@@ -10,3 +10,5 @@ dashmap = "7.0.0-rc2"
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
+tower-http = { version = "0.6.8", features = ["trace"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
