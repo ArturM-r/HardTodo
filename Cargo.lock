@@ -743,6 +743,7 @@ dependencies = [
  "axum",
  "chrono",
  "dashmap",
+ "log",
  "serde",
  "tokio",
  "tower-http",

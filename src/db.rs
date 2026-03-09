@@ -1,20 +1,21 @@
-use std::sync::Arc;
+use crate::modules::Todo;
 use chrono::Utc;
 use dashmap::DashMap;
-use tokio::task::id;
+use std::sync::Arc;
 use uuid;
 use uuid::Uuid;
-use crate::modules::{Todo, TodoResponse};
 
 pub struct Db {
-    pub todos: Arc<DashMap<Uuid, Arc<Todo>>>
+    pub todos: Arc<DashMap<Uuid, Arc<Todo>>>,
 }
 impl Db {
     pub fn new() -> Self {
-        Self{todos: Arc::new(DashMap::new())}
+        Self {
+            todos: Arc::new(DashMap::new()),
+        }
     }
     pub fn create(&self, title: String) -> Arc<Todo> {
-        let todo = Arc::new(Todo{
+        let todo = Arc::new(Todo {
             id: Uuid::new_v4(),
             title,
             created_at: Utc::now(),
@@ -24,7 +25,7 @@ impl Db {
         self.todos.insert(todo.id, Arc::clone(&todo));
         todo
     }
-    pub fn update(&self, id: Uuid, title:Option<String>, completed:Option<bool>) -> bool{
+    pub fn update(&self, id: Uuid, title: Option<String>, completed: Option<bool>) -> bool {
         if let Some(mut entry) = self.todos.get_mut(&id) {
             let todo_mut = Arc::make_mut(&mut entry);
             if let Some(completed) = completed {
@@ -45,10 +46,13 @@ impl Db {
         let todo = self.todos.get(&id).map(|entry| (**entry).clone());
         todo
     }
-    pub fn get_all(&self) -> Vec<Todo>{
-        self.todos.iter().map(|x| {
-            let todo = (**x).clone();
-            todo
-        }).collect()
+    pub fn get_all(&self) -> Vec<Todo> {
+        self.todos
+            .iter()
+            .map(|x| {
+                let todo = (**x).clone();
+                todo
+            })
+            .collect()
     }
 }
