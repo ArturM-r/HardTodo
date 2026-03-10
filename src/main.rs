@@ -1,6 +1,8 @@
 mod db;
 mod handlers;
 mod modules;
+mod errors;
+
 use crate::db::Db;
 use crate::handlers::{create, delete_one, get_all, get_one, update};
 use crate::modules::AppState;
