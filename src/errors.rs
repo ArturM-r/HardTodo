@@ -8,16 +8,15 @@ pub enum AppError {
     BadRequest(String),
     #[error("Not found")]
     NotFound,
+    #[error("Not found")]
+    NoContent,
 }
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
         match self {
-            AppError::BadRequest(msg) =>{
-                (StatusCode::BAD_REQUEST, msg).into_response()
-            },
-            AppError::NotFound => {
-                (StatusCode::NOT_FOUND, "Page not found").into_response()
-            }
+            AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Page not found").into_response(),
+            AppError::NoContent => (StatusCode::NOT_FOUND, "Content not found").into_response(),
         }
     }
 }

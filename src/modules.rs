@@ -1,9 +1,11 @@
-use crate::db::Db;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Todo {
+    pub user_id: Uuid,
     pub id: uuid::Uuid,
     pub title: String,
     pub completed: bool,
@@ -29,9 +31,9 @@ pub struct TodoResponse {
     pub completed: bool,
     pub time: DateTime<chrono::Utc>,
 }
-
+#[derive(Clone)]
 pub struct AppState {
-    pub db: Db,
+    pub db: PgPool,
 }
 
 impl From<Todo> for TodoResponse {

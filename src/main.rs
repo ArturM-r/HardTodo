@@ -1,15 +1,17 @@
 mod db;
+mod errors;
 mod handlers;
 mod modules;
-mod errors;
 
-use crate::db::Db;
 use crate::handlers::{create, delete_one, get_all, get_one, update};
 use crate::modules::AppState;
 use axum;
 use axum::Router;
 use axum::routing::{delete, get, post, put};
+use dotenv::dotenv;
 use log::info;
+use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -23,8 +25,15 @@ async fn main() {
         )
         .init();
 
-    let db = Db::new();
-    let state = Arc::new(AppState { db });
+    dotenv().ok();
+
+    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+
+    let pool = PgPoolOptions::new()
+        .connect(&database_url)
+        .await
+        .expect("Failed to connect to Postgres");
+    let state = Arc::new(AppState { db: pool });
 
     let app: Router<()> = Router::new()
         .route("/todo", get(get_all))

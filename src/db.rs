@@ -1,58 +1,85 @@
 use crate::modules::Todo;
-use chrono::Utc;
-use dashmap::DashMap;
-use std::sync::Arc;
-use uuid;
+use sqlx::{PgPool, query, query_as};
 use uuid::Uuid;
-
-pub struct Db {
-    pub todos: Arc<DashMap<Uuid, Arc<Todo>>>,
+pub async fn create(
+    pool: &PgPool,
+    id: Uuid,
+    user_id: Uuid,
+    title: String,
+    completed: bool,
+) -> Result<(), sqlx::Error> {
+    let result = query!(
+        "INSERT INTO todos (id, user_id, title, completed) VALUES ($1, $2, $3, $4)",
+        id,
+        user_id,
+        title,
+        completed
+    )
+    .execute(pool)
+    .await?;
+    if result.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(sqlx::Error::RowNotFound)
+    }
 }
-impl Db {
-    pub fn new() -> Self {
-        Self {
-            todos: Arc::new(DashMap::new()),
-        }
+pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), sqlx::Error> {
+    let result = query!("DELETE FROM users WHERE id = $1", user_id)
+        .execute(pool)
+        .await?;
+    if result.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(sqlx::Error::RowNotFound)
     }
-    pub fn create(&self, title: String) -> Arc<Todo> {
-        let todo = Arc::new(Todo {
-            id: Uuid::new_v4(),
-            title,
-            created_at: Utc::now(),
-            completed: false,
-        });
+}
+pub async fn delete_todo(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), sqlx::Error> {
+    let result = query!(
+        "DELETE FROM todos WHERE user_id = $1 AND id = $2",
+        user_id,
+        id
+    )
+    .execute(pool)
+    .await?;
+    if result.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(sqlx::Error::RowNotFound)
+    }
+}
 
-        self.todos.insert(todo.id, Arc::clone(&todo));
-        todo
-    }
-    pub fn update(&self, id: Uuid, title: Option<String>, completed: Option<bool>) -> bool {
-        if let Some(mut entry) = self.todos.get_mut(&id) {
-            let todo_mut = Arc::make_mut(&mut entry);
-            if let Some(completed) = completed {
-                todo_mut.completed = completed;
-            }
-            if let Some(title) = title {
-                todo_mut.title = title;
-            }
-            true
-        } else {
-            false
-        }
-    }
-    pub fn delete(&self, id: Uuid) -> bool {
-        self.todos.remove(&id).is_some()
-    }
-    pub fn get(&self, id: Uuid) -> Option<Todo> {
-        let todo = self.todos.get(&id).map(|entry| (**entry).clone());
-        todo
-    }
-    pub fn get_all(&self) -> Vec<Todo> {
-        self.todos
-            .iter()
-            .map(|x| {
-                let todo = (**x).clone();
-                todo
-            })
-            .collect()
+pub async fn get(pool: &PgPool, user_id: Uuid) -> Result<Vec<Todo>, sqlx::Error> {
+    let result = query_as!(Todo, "SELECT * FROM todos WHERE user_id = $1", user_id)
+        .fetch_all(pool)
+        .await?;
+    Ok(result)
+}
+pub async fn update(
+    pool: &PgPool,
+    title: Option<String>,
+    completed: Option<bool>,
+    user_id: Uuid,
+    id: Uuid,
+) -> Result<(), sqlx::Error> {
+    let result = sqlx::query!(
+        "
+        UPDATE todos
+        SET
+            title = COALESCE($1, title),
+            completed = COALESCE($2, completed)
+        WHERE id = $3 AND user_id = $4
+        ",
+        title,
+        completed,
+        id,
+        user_id
+    )
+    .execute(pool)
+    .await?;
+
+    if result.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(sqlx::Error::RowNotFound)
     }
 }

@@ -1,9 +1,9 @@
 use crate::errors::AppError;
-use crate::modules::{AppState, TodoCreate, TodoResponse, TodoUpdate};
+use crate::modules::{AppState, TodoCreate, TodoDelete, TodoResponse, TodoUpdate};
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use std::sync::Arc;
 use tracing::info;
@@ -40,14 +40,14 @@ pub async fn get_all(
 }
 
 pub async fn delete_one(
-    Path(id): Path<Uuid>,
+    Path(id): Path<TodoDelete>,
     State(state): State<Arc<AppState>>,
-) -> Result<StatusCode, AppError> {
-    if state.db.delete(id) {
-        info!(%id, "deleted todo");
-        Ok(StatusCode::NO_CONTENT)
+) -> Result<AppError, AppError> {
+    if state.db.delete(id.id) {
+        info!(%id.id, "deleted todo");
+        Ok(AppError::NoContent)
     } else {
-        info!(%id, "todo not found");
+        info!(%id.id, "todo not found");
         Err(AppError::NotFound)
     }
 }
