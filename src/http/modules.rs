@@ -34,6 +34,7 @@ pub struct TodoResponse {
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
+    pub secret: String,
 }
 
 impl From<Todo> for TodoResponse {

@@ -1,16 +1,14 @@
-use crate::modules::Todo;
+use crate::http::modules::Todo;
 use sqlx::{PgPool, query, query_as};
 use uuid::Uuid;
 pub async fn create(
     pool: &PgPool,
-    id: Uuid,
     user_id: Uuid,
     title: String,
     completed: bool,
 ) -> Result<(), sqlx::Error> {
     let result = query!(
-        "INSERT INTO todos (id, user_id, title, completed) VALUES ($1, $2, $3, $4)",
-        id,
+        "INSERT INTO todos (user_id, title, completed) VALUES ($1, $2, $3)",
         user_id,
         title,
         completed

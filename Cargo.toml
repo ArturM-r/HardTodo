@@ -17,3 +17,5 @@ thiserror = "2.0.18"
 tracing = "0.1.44"
 sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "uuid", "chrono"]}
 dotenv = "0.15.0"
+clap = { version = "4.6.0", features = ["derive", "env"] }
+hmac = "0.13.0-rc.5"

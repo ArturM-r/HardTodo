@@ -1,5 +1,6 @@
-use crate::errors::AppError;
-use crate::modules::{AppState, TodoCreate, TodoDelete, TodoResponse, TodoUpdate};
+use crate::http::db;
+use crate::http::errors::AppError;
+use crate::http::modules::{AppState, TodoCreate, TodoDelete, TodoResponse, TodoUpdate};
 use axum::{
     Json,
     extract::{Path, State},
@@ -13,9 +14,6 @@ pub async fn get_one(
     State(state): State<Arc<AppState>>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<TodoResponse>, AppError> {
-    let todo = state.db.get(id).ok_or(AppError::NotFound)?;
-    info!(%id, "fetched todo");
-    Ok(Json(todo.into()))
 }
 
 pub async fn create(
