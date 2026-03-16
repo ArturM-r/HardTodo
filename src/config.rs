@@ -8,3 +8,7 @@ pub struct Config {
     #[arg(long, env)]
     pub hmac_key: String,
 }
+pub struct TodoConfig {
+    pub database_url: String,
+    pub hmac_key: String,
+}

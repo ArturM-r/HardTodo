@@ -7,3 +7,4 @@ pub struct User {
     password_hash: String,
     created_at: NaiveDateTime,
 }
+

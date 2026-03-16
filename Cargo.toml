@@ -4,18 +4,21 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros"] }
 axum = "0.8.8"
-dashmap = "7.0.0-rc2"
-uuid = { version = "1.0", features = ["v4", "serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 tower-http = { version = "0.6.8", features = ["trace"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-log = "0.4.29"
-thiserror = "2.0.18"
 tracing = "0.1.44"
-sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "uuid", "chrono"]}
-dotenv = "0.15.0"
+thiserror = "2.0.18"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio", "uuid", "chrono"] }
+dotenv = "0.15"
 clap = { version = "4.6.0", features = ["derive", "env"] }
-hmac = "0.13.0-rc.5"
+log = "0.4.29"
+hmac = "0.12.1"
+sha2 = "0.10.9"
+time = { version = "0.3", features = ["serde"] }
+jwt = "0.16.0"
+jsonwebtoken = "10.3.0"

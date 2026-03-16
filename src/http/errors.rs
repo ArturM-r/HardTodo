@@ -10,6 +10,8 @@ pub enum AppError {
     NotFound,
     #[error("Not found")]
     NoContent,
+    #[error("UNAUTHORIZED")]
+    UNAUTHORIZED,
 }
 impl IntoResponse for AppError {
     fn into_response(self) -> axum::response::Response {
@@ -17,6 +19,7 @@ impl IntoResponse for AppError {
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg).into_response(),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Page not found").into_response(),
             AppError::NoContent => (StatusCode::NOT_FOUND, "Content not found").into_response(),
+            AppError::UNAUTHORIZED => (StatusCode::UNAUTHORIZED, "Unauthorized").into_response(),
         }
     }
 }

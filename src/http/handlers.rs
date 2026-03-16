@@ -1,4 +1,3 @@
-use crate::http::db;
 use crate::http::errors::AppError;
 use crate::http::modules::{AppState, TodoCreate, TodoDelete, TodoResponse, TodoUpdate};
 use axum::{
