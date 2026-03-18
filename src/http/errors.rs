@@ -8,7 +8,7 @@ pub enum AppError {
     BadRequest(String),
     #[error("Not found")]
     NotFound,
-    #[error("Not found")]
+    #[error("Not content")]
     NoContent,
     #[error("UNAUTHORIZED")]
     UNAUTHORIZED,

@@ -2,26 +2,24 @@ use clap::Parser;
 use dotenv::dotenv;
 use log::{info, log};
 use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
 use todo::config::Config;
-use todo::http::handlers::{create, delete_one, get_all, get_one, update};
+use todo::http::handlers::{create, delete_one, get_one, update};
 use todo::http::modules::AppState;
 
 use axum::{
-    routing::{delete, get, post, put},
     Router,
+    routing::{delete, get, post, put},
 };
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info")),
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
         )
         .init();
 
@@ -34,13 +32,12 @@ async fn main() {
         .await
         .expect("Failed to connect to Postgres");
 
-    let state = Arc::new(AppState {
+    let state = AppState {
         db: pool,
         secret: config.hmac_key,
-    });
+    };
 
     let app = Router::new()
-        .route("/todo", get(get_all))
         .route("/todo", post(create))
         .route("/todo/{id}", get(get_one))
         .route("/todo/{id}", put(update))

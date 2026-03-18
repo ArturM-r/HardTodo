@@ -1,70 +1,97 @@
+use crate::auth::extractor::AuthUser;
 use crate::http::errors::AppError;
 use crate::http::modules::{AppState, TodoCreate, TodoDelete, TodoResponse, TodoUpdate};
+use axum::http::StatusCode;
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
 };
+use sqlx::query;
 use std::sync::Arc;
-use tracing::info;
 use uuid::Uuid;
 
 pub async fn get_one(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Path(id): Path<Uuid>,
+    AuthUser { user_id }: AuthUser,
 ) -> Result<Json<TodoResponse>, AppError> {
+    let result = query!(
+        "SELECT id, user_id, title, completed, created_at FROM todos WHERE id = $1 AND user_id = $2",
+        id, user_id
+    ).fetch_one(&state.db).await.map_err(|e| {
+        AppError::NotFound
+    })?;
+
+    Ok(Json(TodoResponse {
+        id: result.id,
+        user_id,
+        title: result.title,
+        completed: result.completed,
+        time: result.created_at,
+    }))
 }
 
 pub async fn create(
-    State(state): State<Arc<AppState>>,
-    Json(payload): Json<TodoCreate>,
-) -> Result<StatusCode, AppError> {
-    if payload.title.trim().is_empty() {
-        return Err(AppError::BadRequest("title cannot be empty".into()));
-    }
-
-    state.db.create(payload.title);
-    info!("created todo");
-    Ok(StatusCode::CREATED)
-}
-
-pub async fn get_all(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<Vec<TodoResponse>>, AppError> {
-    let todos: Vec<TodoResponse> = state.db.get_all().into_iter().map(Into::into).collect();
-    info!("fetched all todos");
-    Ok(Json(todos))
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
+    Json(req): Json<TodoCreate>,
+) -> Result<(StatusCode, Json<TodoResponse>), AppError> {
+    let result = query!(
+        "INSERT INTO todos (user_id, title) VALUES ($1, $2) returning  created_at, id",
+        user_id,
+        req.title
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| AppError::BadRequest("CANNOT CREATE".to_string()))?;
+    Ok((
+        StatusCode::OK,
+        Json(TodoResponse {
+            id: result.id,
+            user_id,
+            title: req.title,
+            time: result.created_at,
+            completed: false,
+        }),
+    ))
 }
 
 pub async fn delete_one(
-    Path(id): Path<TodoDelete>,
-    State(state): State<Arc<AppState>>,
-) -> Result<AppError, AppError> {
-    if state.db.delete(id.id) {
-        info!(%id.id, "deleted todo");
-        Ok(AppError::NoContent)
-    } else {
-        info!(%id.id, "todo not found");
-        Err(AppError::NotFound)
-    }
+    Path(delete): Path<TodoDelete>,
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
+) -> Result<(StatusCode, Json<TodoDelete>), AppError> {
+    let result = query!(
+        "DELETE FROM todos WHERE id = $1 AND user_id = $2 RETURNING id",
+        delete.id,
+        user_id
+    )
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| AppError::NotFound)?;
+
+    Ok((StatusCode::OK, Json(TodoDelete { id: result.id })))
 }
 
 pub async fn update(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
     Path(id): Path<Uuid>,
-    Json(payload): Json<TodoUpdate>,
+    Json(req): Json<TodoUpdate>,
 ) -> Result<StatusCode, AppError> {
-    if let Some(title) = &payload.title {
-        if title.trim().is_empty() {
-            return Err(AppError::BadRequest("title cannot be empty".into()));
-        }
-    }
-
-    if state.db.update(id, payload.title, payload.completed) {
-        info!(%id, "updated todo");
-        Ok(StatusCode::OK)
-    } else {
-        info!(%id, "todo not found");
-        Err(AppError::NotFound)
-    }
+    let result = query!(
+        "UPDATE todos
+        SET
+            title = COALESCE($1, title),
+            completed = COALESCE($2, completed)
+        WHERE id = $3 and user_id = $4 ",
+        req.title,
+        req.completed,
+        id,
+        user_id
+    )
+    .execute(&state.db)
+    .await
+    .map_err(|_| AppError::NotFound)?;
+    Ok(StatusCode::OK)
 }
