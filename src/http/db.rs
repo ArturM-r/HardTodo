@@ -1,6 +1,8 @@
-use crate::http::modules::Todo;
 use sqlx::{PgPool, query, query_as};
 use uuid::Uuid;
+
+use crate::http::modules::TodoResponse;
+
 pub async fn create(
     pool: &PgPool,
     user_id: Uuid,
@@ -8,37 +10,17 @@ pub async fn create(
     completed: bool,
 ) -> Result<(), sqlx::Error> {
     let result = query!(
-        "INSERT INTO todos (user_id, title, completed) VALUES ($1, $2, $3)",
+        r#"
+        INSERT INTO todos (user_id, title, completed)
+        VALUES ($1, $2, $3)
+        "#,
         user_id,
         title,
         completed
     )
     .execute(pool)
     .await?;
-    if result.rows_affected() == 1 {
-        Ok(())
-    } else {
-        Err(sqlx::Error::RowNotFound)
-    }
-}
-pub async fn delete_user(pool: &PgPool, user_id: Uuid) -> Result<(), sqlx::Error> {
-    let result = query!("DELETE FROM users WHERE id = $1", user_id)
-        .execute(pool)
-        .await?;
-    if result.rows_affected() == 1 {
-        Ok(())
-    } else {
-        Err(sqlx::Error::RowNotFound)
-    }
-}
-pub async fn delete_todo(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), sqlx::Error> {
-    let result = query!(
-        "DELETE FROM todos WHERE user_id = $1 AND id = $2",
-        user_id,
-        id
-    )
-    .execute(pool)
-    .await?;
+
     if result.rows_affected() == 1 {
         Ok(())
     } else {
@@ -46,31 +28,88 @@ pub async fn delete_todo(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), s
     }
 }
 
-pub async fn get(pool: &PgPool, user_id: Uuid) -> Result<Vec<Todo>, sqlx::Error> {
-    let result = query_as!(Todo, "SELECT * FROM todos WHERE user_id = $1", user_id)
-        .fetch_all(pool)
-        .await?;
-    Ok(result)
+pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<TodoResponse, sqlx::Error> {
+    let todo = query_as!(
+        TodoResponse,
+        r#"
+        SELECT
+            id,
+            user_id,
+            title,
+            completed,
+            created_at AS time
+        FROM todos
+        WHERE user_id = $1 AND id = $2
+        "#,
+        user_id,
+        id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(todo)
 }
+
+pub async fn list(pool: &PgPool, user_id: Uuid) -> Result<Vec<TodoResponse>, sqlx::Error> {
+    let todos = query_as!(
+        TodoResponse,
+        r#"
+        SELECT
+            id,
+            user_id,
+            title,
+            completed,
+            created_at AS time
+        FROM todos
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+        "#,
+        user_id
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(todos)
+}
+
 pub async fn update(
     pool: &PgPool,
-    title: Option<String>,
-    completed: Option<bool>,
     user_id: Uuid,
     id: Uuid,
+    title: Option<String>,
+    completed: Option<bool>,
 ) -> Result<(), sqlx::Error> {
-    let result = sqlx::query!(
-        "
+    let result = query!(
+        r#"
         UPDATE todos
         SET
             title = COALESCE($1, title),
             completed = COALESCE($2, completed)
-        WHERE id = $3 AND user_id = $4
-        ",
+        WHERE user_id = $3 AND id = $4
+        "#,
         title,
         completed,
-        id,
-        user_id
+        user_id,
+        id
+    )
+    .execute(pool)
+    .await?;
+
+    if result.rows_affected() == 1 {
+        Ok(())
+    } else {
+        Err(sqlx::Error::RowNotFound)
+    }
+}
+
+pub async fn delete(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<(), sqlx::Error> {
+    let result = query!(
+        r#"
+        DELETE FROM todos
+        WHERE user_id = $1 AND id = $2
+        "#,
+        user_id,
+        id
     )
     .execute(pool)
     .await?;

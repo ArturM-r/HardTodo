@@ -87,8 +87,8 @@ pub async fn create_user(
 }
 
 pub async fn login(
-    Json(req): Json<LoginUser>,
     State(state): State<AppState>,
+    Json(req): Json<LoginUser>,
 ) -> Result<Json<UserResponse>, anyhow::Error> {
     let result = query!(
         "SELECT password_hash, id FROM users WHERE email = $1 ",
@@ -108,9 +108,9 @@ pub async fn login(
 }
 
 pub async fn update(
-    Json(req): Json<UserUpdate>,
     AuthUser { user_id }: AuthUser,
     State(state): State<AppState>,
+    Json(req): Json<UserUpdate>,
 ) -> Result<Json<UserResponse>, anyhow::Error> {
     let hashed = if let Some(password) = req.password {
         Some(hash_password(password).await?)
