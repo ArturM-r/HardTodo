@@ -1,12 +1,14 @@
-use std::sync::Arc;
-
+use argon2::Params;
+use axum::extract::Query;
 use axum::{
     Json,
     extract::{Path, State},
     http::StatusCode,
 };
+use std::sync::Arc;
 use uuid::Uuid;
 
+use crate::http::modules::{QueryFilter, Queryfr};
 use crate::{
     auth::extractor::AuthUser,
     http::modules::AppState,
@@ -28,8 +30,7 @@ pub async fn create(
         req.title,
         req.completed.unwrap_or(false),
     )
-    .await
-    .map_err(|_| AppError::BadRequest("failed to create todo".into()))?;
+    .await?;
 
     Ok(StatusCode::CREATED)
 }
@@ -39,9 +40,7 @@ pub async fn get_one(
     Path(id): Path<Uuid>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Json<TodoResponse>, AppError> {
-    let todo = db::get(&state.db, user_id, id)
-        .await
-        .map_err(|_| AppError::NotFound)?;
+    let todo = db::get(&state.db, user_id, id).await?;
 
     Ok(Json(todo))
 }
@@ -52,9 +51,7 @@ pub async fn update(
     AuthUser { user_id }: AuthUser,
     Json(req): Json<TodoUpdate>,
 ) -> Result<StatusCode, AppError> {
-    db::update(&state.db, user_id, id, req.title, req.completed)
-        .await
-        .map_err(|_| AppError::NotFound)?;
+    db::update(&state.db, user_id, id, req.title, req.completed).await?;
 
     Ok(StatusCode::OK)
 }
@@ -64,20 +61,18 @@ pub async fn delete_one(
     Path(id): Path<Uuid>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<StatusCode, AppError> {
-    db::delete(&state.db, user_id, id)
-        .await
-        .map_err(|_| AppError::NotFound)?;
+    db::delete(&state.db, user_id, id).await?;
 
     Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn list(
     State(state): State<AppState>,
+    Query(params): Query<Queryfr>,
     AuthUser { user_id }: AuthUser,
 ) -> Result<Json<Vec<TodoResponse>>, AppError> {
-    let todos = db::list(&state.db, user_id)
-        .await
-        .map_err(|_| AppError::BadRequest("failed to fetch todos".into()))?;
+    let filter = QueryFilter::from(params);
+    let todos = db::list(&state.db, user_id, &filter).await?;
 
     Ok(Json(todos))
 }

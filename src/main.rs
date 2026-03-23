@@ -1,22 +1,20 @@
 use clap::Parser;
 use dotenv::dotenv;
-use log::{info, log};
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::EnvFilter;
 
 use todo::config::Config;
-use todo::http::handlers::{create, delete_one, get_one, update, list};
+use todo::http::handlers::{create, delete_one, get_one, list, update};
 use todo::http::modules::AppState;
 
 use axum::{
     Router,
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post},
 };
-use axum::routing::patch;
-use tracing::callsite::register;
 use todo::auth::user::{create_user, login};
+use tracing::info;
 
 #[tokio::main]
 async fn main() {
@@ -40,19 +38,22 @@ async fn main() {
         secret: config.hmac_key,
     };
 
+    // main.rs
+    let todo_router = Router::new()
+        .route("/", get(list).post(create))
+        .route("/{id}", get(get_one).patch(update).delete(delete_one));
+
+    let auth_router = Router::new()
+        .route("/login", post(login))  // login должен быть POST, не GET
+        .route("/register", post(create_user))
+        .route("/update", patch(update));
+
     let app = Router::new()
-        .route("/todo", get(list))
-        .route("/todo", post(create))
-        .route("/todo/{id}", get(get_one))
-        .route("/todo/{id}", put(update))
-        .route("/todo/{id}", delete(delete_one))
+        .nest("/todo", todo_router)
+        .nest("/auth", auth_router)
         .layer(TraceLayer::new_for_http())
         .with_state(state);
 
-    let auth = Router::new()
-        .route("/login", get(login))
-        .route("/register", post(create_user))
-        .route("/update", patch(update));
     let listener = TcpListener::bind("127.0.0.1:3000").await.unwrap();
     info!("Listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();

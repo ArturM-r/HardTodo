@@ -1,8 +1,21 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
+use sqlx::postgres::types::PgLQueryVariantFlag;
+use sqlx::{FromRow, PgPool};
 use uuid::Uuid;
-
+pub struct QueryFilter {
+    pub offset: u32,
+    pub limit: u32,
+    pub search: Option<String>,
+    pub completed: Option<bool>,
+}
+#[derive(Deserialize)]
+pub struct Queryfr {
+    pub offset: Option<u32>,
+    pub limit: Option<u32>,
+    pub search: Option<String>,
+    pub completed: Option<bool>,
+}
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Todo {
     pub id: Uuid,
@@ -29,13 +42,13 @@ pub struct TodoDelete {
     pub id: Uuid,
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, FromRow)]
 pub struct TodoResponse {
     pub id: Uuid,
     pub user_id: Uuid,
     pub title: String,
     pub completed: bool,
-    pub time: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Clone)]
@@ -51,7 +64,17 @@ impl From<Todo> for TodoResponse {
             user_id: value.user_id,
             title: value.title,
             completed: value.completed,
-            time: value.created_at,
+            created_at: value.created_at,
+        }
+    }
+}
+impl From<Queryfr> for QueryFilter {
+    fn from(query: Queryfr) -> Self {
+        Self {
+            offset: query.offset.unwrap_or(0),
+            limit: query.limit.unwrap_or(10),
+            search: query.search,
+            completed: query.completed,
         }
     }
 }

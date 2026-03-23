@@ -1,7 +1,7 @@
-use sqlx::{PgPool, query, query_as};
+use crate::http::errors::AppError;
+use crate::http::modules::{QueryFilter, Queryfr, TodoResponse};
+use sqlx::{PgPool, Postgres, QueryBuilder, query, query_as};
 use uuid::Uuid;
-
-use crate::http::modules::TodoResponse;
 
 pub async fn create(
     pool: &PgPool,
@@ -37,7 +37,7 @@ pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<TodoResponse,
             user_id,
             title,
             completed,
-            created_at AS time
+            created_at
         FROM todos
         WHERE user_id = $1 AND id = $2
         "#,
@@ -50,24 +50,44 @@ pub async fn get(pool: &PgPool, user_id: Uuid, id: Uuid) -> Result<TodoResponse,
     Ok(todo)
 }
 
-pub async fn list(pool: &PgPool, user_id: Uuid) -> Result<Vec<TodoResponse>, sqlx::Error> {
-    let todos = query_as!(
-        TodoResponse,
-        r#"
-        SELECT
-            id,
-            user_id,
-            title,
-            completed,
-            created_at AS time
-        FROM todos
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-        "#,
-        user_id
-    )
-    .fetch_all(pool)
-    .await?;
+pub async fn list(
+    pool: &PgPool,
+    user_id: Uuid,
+    filter: &QueryFilter,
+) -> Result<Vec<TodoResponse>, AppError> {
+    if !(1..100).contains(&filter.limit) {
+        return Err(AppError::Database(sqlx::Error::InvalidArgument(
+            "limit to big".to_string(),
+        )));
+    }
+    let mut builder = QueryBuilder::<Postgres>::new(
+        "SELECT id, user_id, title, completed, created_at FROM todos WHERE user_id = ",
+    );
+    builder.push_bind(user_id);
+    if let Some(completed) = filter.completed {
+        builder.push(" AND completed = ");
+        builder.push_bind(completed);
+    }
+    if let Some(search) = &filter.search {
+        let search = search.trim();
+        if !search.is_empty() {
+            builder.push(" AND title ILIKE ");
+            builder.push_bind(format!("%{}%", search));
+        } else {
+            return Err(AppError::Database(sqlx::Error::InvalidArgument(
+                "invalid search".to_string(),
+            )));
+        }
+    }
+    builder.push(" ORDER BY created_at DESC");
+    builder.push(" LIMIT ");
+    builder.push_bind(filter.limit as i64);
+    builder.push(" OFFSET ");
+    builder.push_bind(filter.offset as i64);
+    let todos = builder
+        .build_query_as::<TodoResponse>()
+        .fetch_all(pool)
+        .await?;
 
     Ok(todos)
 }
