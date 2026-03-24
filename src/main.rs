@@ -1,5 +1,4 @@
 use clap::Parser;
-use dotenv::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -11,7 +10,7 @@ use todo::http::modules::AppState;
 
 use axum::{
     Router,
-    routing::{delete, get, patch, post},
+    routing::{get, patch, post},
 };
 use todo::auth::user::{create_user, login};
 use tracing::info;
@@ -24,9 +23,10 @@ async fn main() {
         )
         .init();
 
-    dotenv().ok();
+    dotenvy::dotenv().ok();
 
     let config = Config::parse();
+
 
     let pool = PgPoolOptions::new()
         .connect(&config.database_url)
