@@ -73,10 +73,6 @@ pub async fn list(
         if !search.is_empty() {
             builder.push(" AND title ILIKE ");
             builder.push_bind(format!("%{}%", search));
-        } else {
-            return Err(AppError::Database(sqlx::Error::InvalidArgument(
-                "invalid search".to_string(),
-            )));
         }
     }
     builder.push(" ORDER BY created_at DESC");

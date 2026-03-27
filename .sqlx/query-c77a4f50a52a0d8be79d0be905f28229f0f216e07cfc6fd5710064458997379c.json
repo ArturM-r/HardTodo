@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE todos\n        SET\n            title = COALESCE($1, title),\n            completed = COALESCE($2, completed)\n        WHERE user_id = $3 AND id = $4\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c77a4f50a52a0d8be79d0be905f28229f0f216e07cfc6fd5710064458997379c"
+}

@@ -1,4 +1,6 @@
 use chrono::{DateTime, Utc};
+use redis::Client;
+use redis::aio::MultiplexedConnection;
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::types::PgLQueryVariantFlag;
 use sqlx::{FromRow, PgPool};
@@ -55,6 +57,7 @@ pub struct TodoResponse {
 pub struct AppState {
     pub db: PgPool,
     pub secret: String,
+    pub redis: Client,
 }
 
 impl From<Todo> for TodoResponse {
@@ -73,7 +76,7 @@ impl From<Queryfr> for QueryFilter {
         Self {
             offset: query.offset.unwrap_or(0),
             limit: query.limit.unwrap_or(10),
-            search: query.search,
+            search: query.search.clone(),
             completed: query.completed,
         }
     }
